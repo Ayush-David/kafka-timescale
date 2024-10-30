@@ -1,0 +1,41 @@
+version: '3.9'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    ports:
+      - "9092:9092"  # Internal listener
+      - "9093:9093"  # External listener
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://localhost:9093
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE  # Set inter-broker listener
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg12
+    environment:
+      POSTGRES_DB: tsdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ayush
+    ports:
+      - "5432:5432"
+
+  kafka-consumer:
+    build: ./kafka-consumer
+    depends_on:
+      - kafka
+      - timescaledb
+    environment:
+      DB_URL: jdbc:postgresql://timescaledb:5432/tsdb
+      DB_USER: postgres
+      DB_PASSWORD: ayush
+
