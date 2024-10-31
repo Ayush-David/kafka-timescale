@@ -35,7 +35,7 @@ services:
       - kafka
       - timescaledb
     environment:
-      DB_URL: jdbc:postgresql://timescaledb:5432/tsdb
+      DB_URL: jdbc:postgresql://localhost:5432/tsdb
       DB_USER: postgres
       DB_PASSWORD: ayush
 
