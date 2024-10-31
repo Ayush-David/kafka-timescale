@@ -2,6 +2,8 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -31,15 +33,20 @@ public class KafkaToTimescaleDB {
         consumer.subscribe(Collections.singletonList(topic));
 
         try (Connection connection = DriverManager.getConnection(dbUrl, user, password)) {
-            String insertSQL = "INSERT INTO events (time, event_type, event_data) VALUES (?, ?, ?)";
+            String insertSQL = "INSERT INTO events (time, occupancy, entry, exit, source_id) VALUES (?, ?, ?, ?, ?)";
+            ObjectMapper objectMapper = new ObjectMapper();
 
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
                     try (PreparedStatement pstmt = connection.prepareStatement(insertSQL)) {
-                        pstmt.setTimestamp(1, Timestamp.from(record.timestamp()));
-                        pstmt.setString(2, record.key());
-                        pstmt.setString(3, record.value());
+                        JsonNode jsonNode = objectMapper.readTree(record.value());
+
+                        pstmt.setTimestamp(1, Timestamp.valueOf(jsonNode.get("timestamp").asText()));
+                        pstmt.setInt(2, jsonNode.get("occupancy").asInt());
+                        pstmt.setInt(3, jsonNode.get("Entry").asInt());
+                        pstmt.setInt(4, jsonNode.get("Exit").asInt());
+                        pstmt.setInt(5, jsonNode.get("source_id").asInt());
                         pstmt.executeUpdate();
                     } catch (Exception e) {
                         System.err.println("Error inserting data: " + e.getMessage());
