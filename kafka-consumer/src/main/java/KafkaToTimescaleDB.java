@@ -1,4 +1,3 @@
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -31,10 +30,10 @@ public class KafkaToTimescaleDB {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
 
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
-        consumer.subscribe(Collections.singletonList(topic));
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+             Connection connection = DriverManager.getConnection(dbUrl, user, password)) {
 
-        try (Connection connection = DriverManager.getConnection(dbUrl, user, password)) {
+            consumer.subscribe(Collections.singletonList(topic));
             String insertSQL = "INSERT INTO events (time, occupancy, entry, exit, source_id) VALUES (?, ?, ?, ?, ?)";
             ObjectMapper objectMapper = new ObjectMapper();
 
@@ -42,7 +41,7 @@ public class KafkaToTimescaleDB {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
                     try (PreparedStatement pstmt = connection.prepareStatement(insertSQL)) {
-                        JsonNode jsonNode = objectMapper.readTree(record.value()); // Move this here
+                        JsonNode jsonNode = objectMapper.readTree(record.value());
 
                         pstmt.setTimestamp(1, Timestamp.valueOf(jsonNode.get("timestamp").asText()));
                         pstmt.setInt(2, jsonNode.get("occupancy").asInt());
@@ -57,8 +56,6 @@ public class KafkaToTimescaleDB {
             }
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            consumer.close();
         }
     }
 }
