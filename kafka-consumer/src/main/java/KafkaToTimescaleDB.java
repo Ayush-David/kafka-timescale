@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class KafkaToTimescaleDB {
     public static void main(String[] args) {
-        String topic = "quickstart";
+        String topic = "quickstart-events";
 
         // Load environment variables
         String dbUrl = System.getenv("DB_URL");
@@ -26,7 +26,7 @@ public class KafkaToTimescaleDB {
 
         // Configure Kafka Consumer
         Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "your-group-id");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
